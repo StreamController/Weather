@@ -1,0 +1,8 @@
+{
+    "plugin.name": "Weather",
+    "actions.lat-entry.tite": "Latitude",
+    "actions.long-entry.tite": "Longitude",
+    "actions-open-meteo.thanks": "Thanks to open-meteo for providing such a great API",
+    "actions.wind-direction.name": "Wind Direction",
+    "actions.weather.name": "Weather"
+}

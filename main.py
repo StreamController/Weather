@@ -41,8 +41,8 @@ class WindDirection(ActionBase):
         self.show()
 
     def get_config_rows(self) -> list:
-        self.lat_entry = Adw.EntryRow(title="Latitude", input_purpose=Gtk.InputPurpose.NUMBER)
-        self.lon_entry = Adw.EntryRow(title="Longitude", input_purpose=Gtk.InputPurpose.NUMBER)
+        self.lat_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.lat-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
+        self.lon_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.lon-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
 
         self.load_config_defaults()
 
@@ -143,7 +143,7 @@ class WindDirection(ActionBase):
         self.show()
     
     def get_custom_config_area(self):
-        return Gtk.Label(label="Thanks to open-meteo.com for their great free api!")
+        return Gtk.Label(label=self.plugin_base.lm.get("actions.open-meteo-thanks"))
 
 
 class Weather(ActionBase):
@@ -164,8 +164,8 @@ class Weather(ActionBase):
         self.show()
 
     def get_config_rows(self) -> list:
-        self.lat_entry = Adw.EntryRow(title="Latitude", input_purpose=Gtk.InputPurpose.NUMBER)
-        self.lon_entry = Adw.EntryRow(title="Longitude", input_purpose=Gtk.InputPurpose.NUMBER)
+        self.lat_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.lat-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
+        self.lon_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.lon-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
 
         self.load_config_defaults()
 
@@ -176,7 +176,7 @@ class Weather(ActionBase):
         return [self.lat_entry, self.lon_entry]
     
     def get_custom_config_area(self):
-        return Gtk.Label(label="Thanks to open-meteo.com for their great free api!")
+        return Gtk.Label(label=self.plugin_base.lm.get("actions.open-meteo-thanks"))
     
     def on_lat_changed(self, entry, *args):
         settings = self.get_settings()
@@ -302,7 +302,7 @@ class WeatherPlugin(PluginBase):
             plugin_base=self,
             action_base=WindDirection,
             action_id="com_core447_Weather::WindDirection",
-            action_name="Wind Direction",
+            action_name=self.lm.get("actions.wind-direction.name"),
             icon=Gtk.Image(icon_name="weather-windy-symbolic")
         )
         self.add_action_holder(self.wind_direction_holder)
@@ -311,15 +311,15 @@ class WeatherPlugin(PluginBase):
             plugin_base=self,
             action_base=Weather,
             action_id="com_core447_Weather::Weather",
-            action_name="Weather",
+            action_name=self.lm.get("actions.weather.name"),
             icon=Gtk.Image(icon_name="weather-clear-symbolic")
         )
         self.add_action_holder(self.weather_holder)
 
         # Register plugin
         self.register(
-            plugin_name="Weather",
-            github_repo="https://github.com/StreamController/Requests",
+            plugin_name=self.lm.get("plugin.name"),
+            github_repo="https://github.com/StreamController/Weather",
             plugin_version="1.0.0",
             app_version="1.0.0-alpha"
         )
