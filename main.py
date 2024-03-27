@@ -42,7 +42,7 @@ class WindDirection(ActionBase):
 
     def get_config_rows(self) -> list:
         self.lat_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.lat-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
-        self.lon_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.lon-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
+        self.lon_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.long-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
 
         self.load_config_defaults()
 
@@ -165,7 +165,7 @@ class Weather(ActionBase):
 
     def get_config_rows(self) -> list:
         self.lat_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.lat-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
-        self.lon_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.lon-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
+        self.lon_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.long-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
 
         self.load_config_defaults()
 
