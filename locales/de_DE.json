@@ -4,5 +4,9 @@
     "actions.long-entry.title": "Breitengrad",
     "actions.open-meteo-thanks": "Dank an open-meteo für die Bereitstellung einer so gutenAPI",
     "actions.wind-direction.name": "Windrichtung",
-    "actions.weather.name": "Wetter"
+    "actions.weather.name": "Wetter",
+    "actions.units.imperial": "Imperial",
+    "actions.units.metric": "Metrisch",
+    "actions.units.celsius": "Celsius",
+    "actions.units.fahrenheit": "Fahrenheit"
 }

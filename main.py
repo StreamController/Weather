@@ -1,4 +1,5 @@
 import json
+from GtkHelper.GtkHelper import ComboRow
 from src.backend.PluginManager.ActionBase import ActionBase
 from src.backend.PluginManager.PluginBase import PluginBase
 from src.backend.PluginManager.ActionHolder import ActionHolder
@@ -41,18 +42,30 @@ class WindDirection(ActionBase):
         self.show()
 
     def get_config_rows(self) -> list:
+        self.units_model = Gtk.ListStore.new([str, int])
+        self.units_row = ComboRow(title=self.plugin_base.lm.get("actions.unit.title"), model=self.units_model)
         self.lat_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.lat-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
         self.lon_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.long-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
 
+        self.units_cell_renderer = Gtk.CellRendererText()
+        self.units_row.combo_box.pack_start(self.units_cell_renderer, True)
+        self.units_row.combo_box.add_attribute(self.units_cell_renderer, "text", 0)
+
+        self.load_units_model()
         self.load_config_defaults()
 
         # Connect signals
         self.lat_entry.connect("notify::text", self.on_lat_changed)
         self.lon_entry.connect("notify::text", self.on_lon_changed)
+        self.units_row.combo_box.connect("changed", self.on_units_changed)
 
-        return [self.lat_entry, self.lon_entry]
+        return [self.lat_entry, self.lon_entry, self.units_row]
     
-    def on_lat_changed(self, entry, *args):
+    def load_units_model(self):
+        self.units_model.append([self.plugin_base.lm.get("actions.units.metric"), 1])
+        self.units_model.append([self.plugin_base.lm.get("actions.units.imperial"), 2])
+    
+    def on_lat_changed(self, entry, text):
         settings = self.get_settings()
         settings["lat"] = entry.get_text()
         self.set_settings(settings)
@@ -66,14 +79,33 @@ class WindDirection(ActionBase):
 
         self.show()
 
+    def on_units_changed(self, combo_box, *args):
+        unit = self.units_model[combo_box.get_active()][1]
+
+        settings = self.get_settings()
+        settings["unit"] = unit
+        self.set_settings(settings)
+
+        self.show()
+
+
     def load_config_defaults(self):
-        self.lat_entry.set_text(self.get_settings().get("lat", "")) # Does not accept None
-        self.lon_entry.set_text(self.get_settings().get("lon", "")) # Does not accept Non
+        settings = self.get_settings()
+        self.lat_entry.set_text(settings.get("lat", "")) # Does not accept None
+        self.lon_entry.set_text(settings.get("lon", "")) # Does not accept None
+
+        if settings.get("unit") == 2: #Imperial
+            self.units_row.combo_box.set_active(1)
+        else: #Celcius and none
+            self.units_row.combo_box.set_active(0)
+
+
 
     def get_wind_data(self) -> list[float]:
         settings = self.get_settings()
         lat = settings.get("lat")
         lon = settings.get("lon")
+        imperial = settings.get("unit") == 2
 
         # Try to convert lat and lon to float]
         try:
@@ -92,6 +124,9 @@ class WindDirection(ActionBase):
             "longitude": lon,
             "current": ["wind_speed_10m", "wind_direction_10m"]
         }
+
+        if imperial:
+            params["wind_speed_unit"] = "mph"
 
         # Make request with the custom cache session
         try:
@@ -164,16 +199,28 @@ class Weather(ActionBase):
         self.show()
 
     def get_config_rows(self) -> list:
+        self.units_model = Gtk.ListStore.new([str, int])
+        self.units_row = ComboRow(title=self.plugin_base.lm.get("actions.unit.title"), model=self.units_model)
         self.lat_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.lat-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
         self.lon_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.long-entry.title"), input_purpose=Gtk.InputPurpose.NUMBER)
 
+        self.units_cell_renderer = Gtk.CellRendererText()
+        self.units_row.combo_box.pack_start(self.units_cell_renderer, True)
+        self.units_row.combo_box.add_attribute(self.units_cell_renderer, "text", 0)
+
+        self.load_units_model()
         self.load_config_defaults()
 
         # Connect signals
         self.lat_entry.connect("notify::text", self.on_lat_changed)
         self.lon_entry.connect("notify::text", self.on_lon_changed)
+        self.units_row.combo_box.connect("changed", self.on_units_changed)
 
-        return [self.lat_entry, self.lon_entry]
+        return [self.lat_entry, self.lon_entry, self.units_row]
+    
+    def load_units_model(self):
+        self.units_model.append([self.plugin_base.lm.get("actions.units.celsius"), 1])
+        self.units_model.append([self.plugin_base.lm.get("actions.units.fahrenheit"), 2])
     
     def get_custom_config_area(self):
         return Gtk.Label(label=self.plugin_base.lm.get("actions.open-meteo-thanks"))
@@ -192,9 +239,25 @@ class Weather(ActionBase):
 
         self.show()
 
+    def on_units_changed(self, combo_box, *args):
+        unit = self.units_model[combo_box.get_active()][1]
+
+        settings = self.get_settings()
+        settings["unit"] = unit
+        self.set_settings(settings)
+
+        self.show()
+
     def load_config_defaults(self):
-        self.lat_entry.set_text(self.get_settings().get("lat", "")) # Does not accept None
-        self.lon_entry.set_text(self.get_settings().get("lon", "")) # Does not accept Non
+        settings = self.get_settings()
+        self.lat_entry.set_text(settings.get("lat", "")) # Does not accept None
+        self.lon_entry.set_text(settings.get("lon", "")) # Does not accept Non
+
+        if settings.get("unit") == 2: #Imperial
+            self.units_row.combo_box.set_active(1)
+        else: #Celcius and none
+            self.units_row.combo_box.set_active(0)
+
 
     def show(self):
         # Stop timer if active
@@ -226,6 +289,8 @@ class Weather(ActionBase):
         lat = settings.get("lat")
         lon = settings.get("lon")
 
+        imperial = settings.get("unit") == 2
+
         # Try to convert lat and lon to float]
         try:
             lat = float(lat)
@@ -243,6 +308,9 @@ class Weather(ActionBase):
             "longitude": lon,
             "current": ["weather_code", "is_day", "temperature_2m"]
         }
+
+        if imperial:
+            params["temperature_unit"] = "fahrenheit"
 
         # Make request with the custom cache session
         try:
