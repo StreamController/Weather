@@ -3,5 +3,6 @@
     "thumbnail": "store/Thumbnail.png",
     "id": "com_core447_Weather",
     "name": "Weather",
-    "description": "Displays the current weather for the selected location"
+    "description": "Displays the current weather for the selected location",
+    "short-description": "Show the weather"
 }
