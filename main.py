@@ -3,6 +3,8 @@ from GtkHelper.GtkHelper import ComboRow
 from src.backend.PluginManager.ActionBase import ActionBase
 from src.backend.PluginManager.PluginBase import PluginBase
 from src.backend.PluginManager.ActionHolder import ActionHolder
+from src.backend.DeckManagement.InputIdentifier import Input
+from src.backend.PluginManager.ActionInputSupport import ActionInputSupport
 
 # Import gtk modules
 import gi
@@ -365,18 +367,28 @@ class WeatherPlugin(PluginBase):
         self.wind_direction_holder = ActionHolder(
             plugin_base=self,
             action_base=WindDirection,
-            action_id="com_core447_Weather::WindDirection",
+            action_id_suffix="WindDirection",
             action_name=self.lm.get("actions.wind-direction.name"),
-            icon=Gtk.Image(icon_name="weather-windy-symbolic")
+            icon=Gtk.Image(icon_name="weather-windy-symbolic"),
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.SUPPORTED,
+                Input.Touchscreen: ActionInputSupport.UNSUPPORTED
+            }
         )
         self.add_action_holder(self.wind_direction_holder)
 
         self.weather_holder = ActionHolder(
             plugin_base=self,
             action_base=Weather,
-            action_id="com_core447_Weather::Weather",
+            action_id_suffix="Weather",
             action_name=self.lm.get("actions.weather.name"),
-            icon=Gtk.Image(icon_name="weather-clear-symbolic")
+            icon=Gtk.Image(icon_name="weather-clear-symbolic"),
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.SUPPORTED,
+                Input.Touchscreen: ActionInputSupport.UNSUPPORTED
+            }
         )
         self.add_action_holder(self.weather_holder)
 
