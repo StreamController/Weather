@@ -1,7 +1,7 @@
 {
     "plugin.name": "Wetter",
-    "actions.lat-entry.title": "Längengrad",
-    "actions.long-entry.title": "Breitengrad",
+    "actions.lat-entry.title": "Breitengrad",
+    "actions.long-entry.title": "Längengrad",
     "actions.open-meteo-thanks": "Dank an open-meteo für die Bereitstellung einer so gutenAPI",
     "actions.wind-direction.name": "Windrichtung",
     "actions.weather.name": "Wetter",
