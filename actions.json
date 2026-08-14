@@ -1,0 +1,60 @@
+{
+    "plugin": {
+        "description": "Shows the current weather and the wind for a place on a key, from Open-Meteo.",
+        "requirements": "An internet connection. No account or API key."
+    },
+    "actions": {
+        "Weather": {
+            "description": "Shows the current weather as an icon with the temperature below it. It refreshes itself every few minutes; pressing the key fetches right away. The place is given as coordinates, not as a city name.",
+            "settings": {
+                "lat": {
+                    "type": "string",
+                    "required": true,
+                    "description": "Latitude of the place, as text. Without it the key shows an error.",
+                    "example": "52.52"
+                },
+                "lon": {
+                    "type": "string",
+                    "required": true,
+                    "description": "Longitude of the place, as text.",
+                    "example": "13.405"
+                },
+                "unit": {
+                    "type": "integer",
+                    "default": 1,
+                    "values": [
+                        1,
+                        2
+                    ],
+                    "description": "1 for metric (°C), 2 for imperial (°F)."
+                }
+            }
+        },
+        "WindDirection": {
+            "description": "Shows where the wind is blowing: an arrow turned into the wind's direction, with the wind speed below it. It refreshes itself; pressing the key fetches right away.",
+            "settings": {
+                "lat": {
+                    "type": "string",
+                    "required": true,
+                    "description": "Latitude of the place, as text.",
+                    "example": "52.52"
+                },
+                "lon": {
+                    "type": "string",
+                    "required": true,
+                    "description": "Longitude of the place, as text.",
+                    "example": "13.405"
+                },
+                "unit": {
+                    "type": "integer",
+                    "default": 1,
+                    "values": [
+                        1,
+                        2
+                    ],
+                    "description": "1 for metric (km/h), 2 for imperial (mph)."
+                }
+            }
+        }
+    }
+}
