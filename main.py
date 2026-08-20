@@ -17,7 +17,38 @@ import os
 from PIL import Image
 from loguru import logger as log
 import requests
+from requests.adapters import HTTPAdapter
+try:
+    from urllib3.util.retry import Retry
+except Exception:  # urllib3 module layout can differ across versions
+    Retry = None
 from threading import Timer
+
+
+# open-meteo is fetched on a background timer; without an explicit timeout a
+# stalled read hangs the refresh thread indefinitely and the key freezes on
+# whatever it last showed. A shared session with connect/read timeouts and
+# bounded retries makes a bad fetch fail within seconds so the retry timer
+# can take over.
+WEATHER_HTTP_TIMEOUT = (5, 10)  # (connect, read) seconds
+
+
+def _build_session() -> requests.Session:
+    session = requests.Session()
+    if Retry is not None:
+        retry = Retry(
+            total=3, connect=3, read=3,
+            backoff_factor=0.5,
+            status_forcelist=(429, 500, 502, 503, 504),
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+    return session
+
+
+SESSION = _build_session()
 
 
 # Add plugin to sys.paths
@@ -35,9 +66,16 @@ class WindDirection(ActionBase):
         super().__init__(*args, **kwargs)
         
         self.show_interval = 30 # minutes
+        self.retry_interval = 2 # minutes, after a failed fetch
+        # Keep showing the last good reading through a run of transient
+        # failures; only fall back to the error icon after this many
+        # consecutive misses (or if there has never been a good reading).
+        self.max_failures_before_error = 3
 
         self.show_timer: Timer = None
-        
+        self._last_wind_data = None
+        self._consecutive_failures = 0
+
     def on_ready(self):
         self.show()
 
@@ -130,20 +168,24 @@ class WindDirection(ActionBase):
 
         # Make request with the custom cache session
         try:
-            resp = requests.get(url, params=params)
+            resp = SESSION.get(url, params=params, timeout=WEATHER_HTTP_TIMEOUT)
         except Exception as e:
             log.error(e)
             return
 
 
-        # Parse response
-        data = resp.json()
-
-        return [
-            data["current"]["wind_direction_10m"],
-            data["current"]["wind_speed_10m"],
-            data["current_units"]["wind_speed_10m"]
-        ]
+        # Parse response. A gateway error (e.g. a 502 HTML page) used to raise
+        # out of resp.json() uncaught; treat any parse/shape problem as no data.
+        try:
+            data = resp.json()
+            return [
+                data["current"]["wind_direction_10m"],
+                data["current"]["wind_speed_10m"],
+                data["current_units"]["wind_speed_10m"]
+            ]
+        except Exception as e:
+            log.error(f"Weather response parse failed (status {resp.status_code}): {e}")
+            return
     
     def show(self):
         # Stop timer if active
@@ -153,9 +195,30 @@ class WindDirection(ActionBase):
 
         wind_data = self.get_wind_data()
         if wind_data is None:
-            self.show_error()
+            # Tolerate transient failures: re-show the last good reading and
+            # only surface the error icon after several misses in a row.
+            self._consecutive_failures += 1
+            if (self._last_wind_data is not None
+                    and self._consecutive_failures < self.max_failures_before_error):
+                self._render_wind(self._last_wind_data)
+            else:
+                self.show_error()
+            # Re-arm the timer on failure too, so a transient network/DNS
+            # blip self-heals instead of freezing the error icon until the
+            # next key press (the early return used to skip the reschedule).
+            self.show_timer = Timer(self.retry_interval*60, self.show)
+            self.show_timer.start()
             return
-        
+
+        self._consecutive_failures = 0
+        self._last_wind_data = wind_data
+        self._render_wind(wind_data)
+
+        # Launch timer
+        self.show_timer = Timer(self.show_interval*60, self.show)
+        self.show_timer.start()
+
+    def _render_wind(self, wind_data):
         wind_direction, wind_speed, wind_speed_unit = wind_data
 
         self.set_bottom_label(f"{int(wind_speed)} {wind_speed_unit}", font_size=12)
@@ -165,13 +228,7 @@ class WindDirection(ActionBase):
 
         image = image.rotate(wind_direction, expand=True)
 
-
         self.set_media(image=image, size=0.85, valign=-1)
-
-
-        # Launch timer
-        self.show_timer = Timer(self.show_interval*60, self.show)
-        self.show_timer.start()
 
     def on_key_down(self):
         # Force update
@@ -186,8 +243,15 @@ class Weather(ActionBase):
         super().__init__(*args, **kwargs)
         
         self.show_interval = 30 # minutes
+        self.retry_interval = 2 # minutes, after a failed fetch
+        # Keep showing the last good reading through a run of transient
+        # failures; only fall back to the error icon after this many
+        # consecutive misses (or if there has never been a good reading).
+        self.max_failures_before_error = 3
 
         self.show_timer: Timer = None
+        self._last_weather = None
+        self._consecutive_failures = 0
         
     def on_ready(self):
         self.show()
@@ -266,9 +330,30 @@ class Weather(ActionBase):
         weather = self.get_weather()
 
         if weather is None:
-            self.show_error()
+            # Tolerate transient failures: re-show the last good reading and
+            # only surface the error icon after several misses in a row.
+            self._consecutive_failures += 1
+            if (self._last_weather is not None
+                    and self._consecutive_failures < self.max_failures_before_error):
+                self._render_weather(self._last_weather)
+            else:
+                self.show_error()
+            # Re-arm the timer on failure too, so a transient network/DNS
+            # blip self-heals instead of freezing the error icon until the
+            # next key press (the early return used to skip the reschedule).
+            self.show_timer = Timer(self.retry_interval*60, self.show)
+            self.show_timer.start()
             return
-        
+
+        self._consecutive_failures = 0
+        self._last_weather = weather
+        self._render_weather(weather)
+
+        # Launch timer
+        self.show_timer = Timer(self.show_interval*60, self.show)
+        self.show_timer.start()
+
+    def _render_weather(self, weather):
         weather_code, is_day, temperature, temperature_unit = weather
 
         image_to_show = self.get_image_to_show(weather_code=weather_code, night=not is_day)
@@ -277,10 +362,6 @@ class Weather(ActionBase):
         self.set_media(media_path=media_path, size=0.8, valign=-1)
 
         self.set_bottom_label(f"{int(temperature)} {temperature_unit}", font_size=12)
-
-        # Launch timer
-        self.show_timer = Timer(self.show_interval*60, self.show)
-        self.show_timer.start()
 
     def get_weather(self) -> int:
         settings = self.get_settings()
@@ -312,16 +393,20 @@ class Weather(ActionBase):
 
         # Make request with the custom cache session
         try:
-            resp = requests.get(url, params=params)
+            resp = SESSION.get(url, params=params, timeout=WEATHER_HTTP_TIMEOUT)
         except Exception as e:
             log.error(e)
             return
 
 
-        # Parse response
-        data = resp.json()
-
-        return [data["current"]["weather_code"], data["current"]["is_day"], data["current"]["temperature_2m"], data["current_units"]["temperature_2m"]]
+        # Parse response. A gateway error (e.g. a 502 HTML page) used to raise
+        # out of resp.json() uncaught; treat any parse/shape problem as no data.
+        try:
+            data = resp.json()
+            return [data["current"]["weather_code"], data["current"]["is_day"], data["current"]["temperature_2m"], data["current_units"]["temperature_2m"]]
+        except Exception as e:
+            log.error(f"Weather response parse failed (status {resp.status_code}): {e}")
+            return
 
     def get_image_to_show(self, weather_code: int, night: bool) -> str:
         wc = weather_code
